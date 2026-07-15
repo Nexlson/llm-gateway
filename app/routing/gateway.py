@@ -7,25 +7,25 @@ from app.core.logging import log_request
 from app.cost.tracker import CostTracker
 from app.providers.base import ProviderAdapter, ProviderError
 from app.repositories.requests_repo import RequestRecord, RequestsRepository
-from app.routing.pools import PoolResolver, Resolution
+from app.routing.router import Resolution, Router
 
 
 class GatewayService:
     def __init__(
-        self, resolver: PoolResolver, registry: dict[str, ProviderAdapter],
+        self, router: Router, registry: dict[str, ProviderAdapter],
         cost: CostTracker, repo: RequestsRepository,
     ) -> None:
-        self._resolver = resolver
+        self._router = router
         self._registry = registry
         self._cost = cost
         self._repo = repo
 
-    async def complete(self, request_id: str, body: dict) -> dict:
+    async def complete(self, request_id: str, body: dict, headers: dict[str, str]) -> dict:
         requested = body.get("model")
         if not requested:
             raise BadRequestError("Missing required field 'model'", param="model")
 
-        resolution = self._resolver.resolve(requested)
+        resolution = self._router.route(body, headers)
         adapter = self._registry[resolution.provider]
         started = time.monotonic()
         try:
