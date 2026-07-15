@@ -76,11 +76,32 @@ docker compose up                  # run as deployed (SQLite volume + reverse pr
 
 ## Build order (roadmap)
 
-| Milestone | Deliverable |
-|---|---|
-| M1 | Passthrough proxy + static key + SQLite request logging |
-| M2 | YAML rule engine + pools + cost table |
-| M3 | Fallback chain + 60s cooldown |
-| M4 | Classifier stage + routing-reason capture |
-| M5 | Dashboard |
-| M6 | VPS deploy, first real workload cut over |
+| Milestone | Deliverable | Status |
+|---|---|---|
+| M1 | Passthrough proxy + static key + SQLite request logging | ✅ done (merged to `main`) |
+| M2 | YAML rule engine + pools + cost table | next |
+| M3 | Fallback chain + 60s cooldown | |
+| M4 | Classifier stage + routing-reason capture | |
+| M5 | Dashboard | |
+| M6 | VPS deploy, first real workload cut over | |
+
+## Autonomous milestone execution
+
+The owner has authorized building the roadmap **autonomously, without pausing for
+approval between milestones**. On any session, drive the roadmap like this:
+
+1. Take the next milestone whose Status is not `done` and run it through `/workflow`
+   (plan → code → test → review), exactly as M1 was built.
+2. When the review gate returns **APPROVE** and the full suite passes, **merge the
+   milestone branch into `main`** (`--no-ff`, milestone message), mark it `done` in the
+   table above, and **immediately start the next milestone** — do not stop to ask.
+3. Keep the same env-var-for-secrets and scope-guard decisions already made; do not
+   pull anything from the architecture doc's **Deferred** table into scope.
+4. **Do stop and ask** only when a stage hits a genuinely blocking decision that is the
+   owner's to make (a new external dependency, a schema/contract choice not implied by
+   the spec, or anything irreversible/outward-facing such as `git push`, deploying, or
+   spending against a real provider key). Note the decision, don't guess past it.
+5. Never `git push`, deploy (M6), or hit real provider APIs without explicit go-ahead —
+   local merges to `main` are fine; anything leaving the machine is not.
+
+Stop autonomous execution when M5 is merged (M6 is a deploy gate that needs the owner).
