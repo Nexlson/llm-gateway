@@ -1,0 +1,28 @@
+# Committed example. Copy to config.yaml (gitignored) and set the referenced env vars.
+# Secrets are NEVER stored here — each *_env value names an environment variable that
+# load_config resolves from os.environ at boot (unset/empty -> boot fails fast).
+api_key_env: "GATEWAY_API_KEY"   # gateway's own static bearer key
+db_path: "gateway.db"
+default_pool: "default"
+
+providers:
+  deepseek:
+    base_url: "https://api.deepseek.com/v1"
+    api_key_env: "DEEPSEEK_API_KEY"
+    timeout_s: 30.0
+  anthropic:
+    base_url: "https://api.anthropic.com/v1"
+    api_key_env: "ANTHROPIC_API_KEY"
+    timeout_s: 30.0
+
+pools:
+  cheap:
+    - { provider: deepseek, model: deepseek-chat }
+    - { provider: anthropic, model: claude-haiku-4-5 }
+  default:
+    - { provider: anthropic, model: claude-sonnet-5 }
+  large-context:
+    - { provider: anthropic, model: claude-sonnet-5 }
+
+# M1 ships an empty price table -> cost_usd stored as 0.0. M2 populates this.
+prices: {}

@@ -1,2 +1,10 @@
 .serena
 .claude/workflow/runs/
+config.yaml
+*.db
+*.db-wal
+*.db-shm
+__pycache__/
+.pytest_cache/
+*.egg-info/
+.venv/
