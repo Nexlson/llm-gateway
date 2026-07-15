@@ -8,14 +8,19 @@ POOLS = {
 }
 
 
-def test_resolves_known_pool_to_first_entry():
-    r = PoolResolver(POOLS, "default").resolve("cheap")
-    assert (r.pool, r.provider, r.model) == ("cheap", "deepseek", "deepseek-chat")
-    assert r.route_stage == "passthrough"
-    assert r.route_reason == "m1-passthrough:pool=cheap"
+def test_has_pool():
+    r = PoolResolver(POOLS, "default")
+    assert r.has_pool("cheap") is True
+    assert r.has_pool("nope") is False
+    assert r.default_pool == "default"
 
 
-def test_unknown_model_falls_to_default_pool():
-    r = PoolResolver(POOLS, "default").resolve("gpt-4o")
-    assert (r.pool, r.provider, r.model) == ("default", "anthropic", "claude-sonnet-5")
-    assert "model-not-a-pool" in r.route_reason
+def test_entries_preserve_order():
+    entries = PoolResolver(POOLS, "default").entries("cheap")
+    assert [(e.provider, e.model) for e in entries] == [
+        ("deepseek", "deepseek-chat"), ("anthropic", "claude-haiku-4-5")]
+
+
+def test_first_entry():
+    e = PoolResolver(POOLS, "default").first_entry("cheap")
+    assert (e.provider, e.model) == ("deepseek", "deepseek-chat")
