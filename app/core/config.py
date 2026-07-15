@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 
 import yaml
 from pydantic import BaseModel, Field
@@ -23,6 +24,20 @@ class PriceEntry(BaseModel):
     output_per_1m: float = 0.0
 
 
+class RuleWhen(BaseModel):
+    max_input_tokens: int | None = None
+    min_input_tokens: int | None = None
+    has_tools: bool | None = None
+    header: str | None = None
+    system_regex: str | None = None
+
+
+class RuleConfig(BaseModel):
+    name: str
+    when: "RuleWhen" = Field(default_factory=lambda: RuleWhen())
+    pool: str
+
+
 class AppConfig(BaseModel):
     api_key_env: str = ""     # name of the env var holding the gateway's static key
     api_key: str = ""         # resolved from os.environ[api_key_env] at load time
@@ -31,6 +46,7 @@ class AppConfig(BaseModel):
     providers: dict[str, ProviderConfig]
     pools: dict[str, list[PoolEntry]]
     prices: dict[str, PriceEntry] = Field(default_factory=dict)
+    rules: list[RuleConfig] = Field(default_factory=list)
 
 
 def load_config(path: str | os.PathLike) -> AppConfig:
@@ -68,3 +84,16 @@ def _validate(cfg: AppConfig) -> None:
                 raise ValueError(
                     f"pool '{pool_name}' references unknown provider '{entry.provider}'"
                 )
+    _TEMPLATE_ONLY = re.compile(r"^\s*\{\{\s*header\.[A-Za-z0-9_-]+\s*\}\}\s*$")
+    for rule in cfg.rules:
+        if rule.when.system_regex is not None:
+            try:
+                re.compile(rule.when.system_regex)
+            except re.error as exc:
+                raise ValueError(
+                    f"rule '{rule.name}' has invalid system_regex: {exc}"
+                ) from exc
+        if not _TEMPLATE_ONLY.match(rule.pool) and rule.pool not in cfg.pools:
+            raise ValueError(
+                f"rule '{rule.name}' references unknown pool '{rule.pool}'"
+            )

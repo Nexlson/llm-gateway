@@ -25,5 +25,5 @@ async def chat_completions(
         raise BadRequestError("Request body must be a JSON object")
 
     request_id = uuid4().hex
-    result = await gateway.complete(request_id, body)
+    result = await gateway.complete(request_id, body, dict(request.headers))
     return JSONResponse(content=result, status_code=200)

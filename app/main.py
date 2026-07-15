@@ -17,6 +17,8 @@ from app.providers.registry import build_registry
 from app.repositories.requests_repo import RequestsRepository
 from app.routing.gateway import GatewayService
 from app.routing.pools import PoolResolver
+from app.routing.router import Router
+from app.routing.rules import RuleEngine
 
 
 def create_app(config: AppConfig | None = None) -> FastAPI:
@@ -30,13 +32,15 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         await db.connect()
         http_client = httpx.AsyncClient()
         registry = build_registry(config, http_client)
-        resolver = PoolResolver(config.pools, config.default_pool)
+        rule_engine = RuleEngine(config.rules)
+        pool_resolver = PoolResolver(config.pools, config.default_pool)
+        router = Router(rule_engine, pool_resolver)
         cost = CostTracker(config.prices)
         repo = RequestsRepository(db.connection)
         app.state.config = config
         app.state.db = db
         app.state.http_client = http_client
-        app.state.gateway = GatewayService(resolver, registry, cost, repo)
+        app.state.gateway = GatewayService(router, registry, cost, repo)
         try:
             yield
         finally:

@@ -26,6 +26,8 @@ from app.core.config import (
     PoolEntry,
     PriceEntry,
     ProviderConfig,
+    RuleConfig,
+    RuleWhen,
     load_config,
 )
 from app.cost.tracker import CostTracker
@@ -164,8 +166,11 @@ async def test_a4_unknown_field_never_422(client, auth_headers):
 
 
 # --------------------------------------------------------------------------
-# A5 - Default-pool fallback for unknown model
+# A5 - Default-pool fallthrough when no rule matches
 # --------------------------------------------------------------------------
+# M2 supersedes M1 model-name routing: the `model` field no longer selects a
+# pool. A request that matches no rule (here: medium length, no tools, no
+# x-pool hint) routes to default_pool with route_stage="default".
 
 
 @respx.mock
@@ -173,22 +178,24 @@ async def test_a5_unknown_model_routes_to_default_pool(client, auth_headers, app
     route = respx.post(ANTHROPIC_URL).mock(
         return_value=httpx.Response(200, json={"id": "z"})
     )
+    medium = "x" * 4000  # ~1000 tokens: above short threshold, below long threshold
     resp = await client.post(
         "/v1/chat/completions",
         headers=auth_headers,
-        json={"model": "gpt-4o-not-a-pool", "messages": []},
+        json={"model": "gpt-4o-not-a-pool",
+              "messages": [{"role": "user", "content": medium}]},
     )
     assert resp.status_code == 200
     assert route.called
     sent = json.loads(route.calls.last.request.content)
-    # default_pool first entry is anthropic/claude-sonnet-5
+    # default_pool first entry is anthropic/claude-sonnet-5; model is rewritten
     assert sent["model"] == "claude-sonnet-5"
 
     cur = await app.state.db.connection.execute(
-        "SELECT pool, provider, model FROM requests"
+        "SELECT pool, provider, model, route_stage FROM requests"
     )
     row = await cur.fetchone()
-    assert row == ("default", "anthropic", "claude-sonnet-5")
+    assert row == ("default", "anthropic", "claude-sonnet-5", "default")
 
 
 # --------------------------------------------------------------------------
@@ -226,10 +233,11 @@ async def test_a6_one_row_columns_match_schema(client, auth_headers, app):
     assert pool == "cheap"
     assert provider == "deepseek"
     assert model == "deepseek-chat"  # resolved upstream model, not pool name
-    assert route_stage == "passthrough"
+    assert route_stage == "rule"  # M2: short tool-less request matches a rule
     assert route_reason is not None
     assert (in_tok, out_tok) == (4, 2)
-    assert cost == 0.0  # empty price table
+    # M2 ships a populated price table; cost computed from provider usage.
+    assert cost == pytest.approx(4 / 1e6 * 0.27 + 2 / 1e6 * 1.10)
     assert isinstance(latency, int) and latency >= 0
     assert status == 200
     assert fallback_from is None
@@ -289,6 +297,13 @@ async def priced_client(tmp_path):
             "default": [PoolEntry(provider="anthropic", model="claude-sonnet-5")],
         },
         prices={"deepseek-chat": PriceEntry(input_per_1m=1.0, output_per_1m=2.0)},
+        # M2: routing is by rule, not by the model field. Route short requests to
+        # the priced `cheap` pool so cost-at-write-time is exercised on deepseek.
+        rules=[
+            RuleConfig(name="short",
+                       when=RuleWhen(max_input_tokens=500, has_tools=False),
+                       pool="cheap"),
+        ],
     )
     application = create_app(config)
     async with application.router.lifespan_context(application):
@@ -444,7 +459,7 @@ def test_a11_loads_typed_config(monkeypatch):
     assert cfg.db_path
     assert set(cfg.pools.keys()) == {"cheap", "default", "large-context"}
     assert "deepseek" in cfg.providers
-    assert cfg.prices == {}
+    assert cfg.prices != {}  # M2 example ships a populated price table
 
 
 def test_a11_rejects_default_pool_not_in_pools(tmp_path, monkeypatch):

@@ -28,7 +28,7 @@ def test_loads_example_config(monkeypatch):
     assert cfg.providers["deepseek"].api_key == "test-deepseek-key"
     assert cfg.default_pool in cfg.pools
     assert cfg.pools["default"][0].provider in cfg.providers
-    assert cfg.prices == {}  # M1 example ships empty price table
+    assert cfg.prices != {}  # M2 example ships a populated price table
 
 
 def test_missing_referenced_env_var_fails_fast(monkeypatch):
@@ -66,3 +66,59 @@ def test_rejects_pool_entry_unknown_provider(tmp_path, monkeypatch):
     )
     with pytest.raises(ValueError):
         load_config(bad)
+
+
+def test_loads_rules_in_order(monkeypatch):
+    _set_env(monkeypatch, EXAMPLE_ENV)
+    cfg = load_config(EXAMPLE)
+    names = [r.name for r in cfg.rules]
+    assert names[0] == "explicit-hint"          # explicit hint evaluated first
+    assert "short-and-simple" in names
+    # prices are now populated (M2)
+    assert cfg.prices != {}
+    assert "deepseek-chat" in cfg.prices
+
+
+def test_rejects_rule_literal_pool_unknown(tmp_path, monkeypatch):
+    monkeypatch.setenv("K", "x")
+    bad = tmp_path / "bad.yaml"
+    bad.write_text(
+        "api_key_env: K\n"
+        "default_pool: default\n"
+        "db_path: g.db\n"
+        "providers:\n  p:\n    base_url: http://x\n    api_key_env: K\n"
+        "pools:\n  default:\n    - {provider: p, model: m}\n"
+        "rules:\n  - name: bad\n    when: {max_input_tokens: 10}\n    pool: nope\n"
+    )
+    with pytest.raises(ValueError):
+        load_config(bad)
+
+
+def test_rejects_rule_bad_regex(tmp_path, monkeypatch):
+    monkeypatch.setenv("K", "x")
+    bad = tmp_path / "bad.yaml"
+    bad.write_text(
+        "api_key_env: K\n"
+        "default_pool: default\n"
+        "db_path: g.db\n"
+        "providers:\n  p:\n    base_url: http://x\n    api_key_env: K\n"
+        "pools:\n  default:\n    - {provider: p, model: m}\n"
+        "rules:\n  - name: bad\n    when: {system_regex: '('}\n    pool: default\n"
+    )
+    with pytest.raises(ValueError):
+        load_config(bad)
+
+
+def test_allows_templated_pool_without_static_pool_check(tmp_path, monkeypatch):
+    monkeypatch.setenv("K", "x")
+    ok = tmp_path / "ok.yaml"
+    ok.write_text(
+        "api_key_env: K\n"
+        "default_pool: default\n"
+        "db_path: g.db\n"
+        "providers:\n  p:\n    base_url: http://x\n    api_key_env: K\n"
+        "pools:\n  default:\n    - {provider: p, model: m}\n"
+        "rules:\n  - name: hint\n    when: {header: x-pool}\n    pool: '{{ header.x-pool }}'\n"
+    )
+    cfg = load_config(ok)             # must not raise despite templated pool
+    assert cfg.rules[0].pool == "{{ header.x-pool }}"

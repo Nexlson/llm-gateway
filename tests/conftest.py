@@ -2,7 +2,14 @@ import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
-from app.core.config import AppConfig, PoolEntry, PriceEntry, ProviderConfig
+from app.core.config import (
+    AppConfig,
+    PoolEntry,
+    PriceEntry,
+    ProviderConfig,
+    RuleConfig,
+    RuleWhen,
+)
 from app.main import create_app
 
 VALID_KEY = "test-key-123"
@@ -23,7 +30,19 @@ def test_config(tmp_path) -> AppConfig:
             "default": [PoolEntry(provider="anthropic", model="claude-sonnet-5")],
             "large-context": [PoolEntry(provider="anthropic", model="claude-sonnet-5")],
         },
-        prices={},
+        prices={
+            "deepseek-chat": PriceEntry(input_per_1m=0.27, output_per_1m=1.10),
+            "claude-sonnet-5": PriceEntry(input_per_1m=3.00, output_per_1m=15.00),
+        },
+        rules=[
+            RuleConfig(name="explicit-hint", when=RuleWhen(header="x-pool"),
+                       pool="{{ header.x-pool }}"),
+            RuleConfig(name="has-tools", when=RuleWhen(has_tools=True), pool="default"),
+            RuleConfig(name="long-context", when=RuleWhen(min_input_tokens=20000),
+                       pool="large-context"),
+            RuleConfig(name="short-and-simple",
+                       when=RuleWhen(max_input_tokens=500, has_tools=False), pool="cheap"),
+        ],
     )
 
 
