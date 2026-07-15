@@ -24,5 +24,25 @@ pools:
   large-context:
     - { provider: anthropic, model: claude-sonnet-5 }
 
-# M1 ships an empty price table -> cost_usd stored as 0.0. M2 populates this.
-prices: {}
+# Illustrative rates (NOT secrets, NOT authoritative) — verify against live provider
+# pricing before production. cost_usd is computed at write time from provider usage.
+prices:
+  deepseek-chat:    { input_per_1m: 0.27, output_per_1m: 1.10 }
+  claude-haiku-4-5: { input_per_1m: 1.00, output_per_1m: 5.00 }
+  claude-sonnet-5:  { input_per_1m: 3.00, output_per_1m: 15.00 }
+
+# Stage-1 deterministic rules, evaluated in order — first match wins.
+# Token thresholds use a ~4-chars/token estimate (routing only, not billing).
+rules:
+  - name: explicit-hint            # caller forces a pool via the x-pool header
+    when: { header: "x-pool" }
+    pool: "{{ header.x-pool }}"
+  - name: has-tools                # tool/function calling → capable default pool
+    when: { has_tools: true }
+    pool: default
+  - name: long-context            # very long inputs → large-context pool
+    when: { min_input_tokens: 20000 }
+    pool: large-context
+  - name: short-and-simple         # short, tool-less → cheap pool
+    when: { max_input_tokens: 500, has_tools: false }
+    pool: cheap
