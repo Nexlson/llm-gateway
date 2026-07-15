@@ -3,6 +3,7 @@
 # load_config resolves from os.environ at boot (unset/empty -> boot fails fast).
 api_key_env: "GATEWAY_API_KEY"   # gateway's own static bearer key
 db_path: "gateway.db"
+cooldown_seconds: 60          # seconds an unhealthy pool entry is skipped before one free retry
 default_pool: "default"
 
 providers:

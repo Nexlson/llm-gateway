@@ -42,6 +42,7 @@ class AppConfig(BaseModel):
     api_key_env: str = ""     # name of the env var holding the gateway's static key
     api_key: str = ""         # resolved from os.environ[api_key_env] at load time
     db_path: str = "gateway.db"
+    cooldown_seconds: float = 60.0
     default_pool: str
     providers: dict[str, ProviderConfig]
     pools: dict[str, list[PoolEntry]]

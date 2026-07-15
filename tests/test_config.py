@@ -109,6 +109,41 @@ def test_rejects_rule_bad_regex(tmp_path, monkeypatch):
         load_config(bad)
 
 
+def test_cooldown_seconds_defaults_to_60(tmp_path, monkeypatch):
+    monkeypatch.setenv("K", "x")
+    ok = tmp_path / "ok.yaml"
+    ok.write_text(
+        "api_key_env: K\n"
+        "default_pool: default\n"
+        "db_path: g.db\n"
+        "providers:\n  p:\n    base_url: http://x\n    api_key_env: K\n"
+        "pools:\n  default:\n    - {provider: p, model: m}\n"
+    )
+    cfg = load_config(ok)
+    assert cfg.cooldown_seconds == 60.0
+
+
+def test_cooldown_seconds_from_yaml(tmp_path, monkeypatch):
+    monkeypatch.setenv("K", "x")
+    ok = tmp_path / "ok.yaml"
+    ok.write_text(
+        "api_key_env: K\n"
+        "cooldown_seconds: 15\n"
+        "default_pool: default\n"
+        "db_path: g.db\n"
+        "providers:\n  p:\n    base_url: http://x\n    api_key_env: K\n"
+        "pools:\n  default:\n    - {provider: p, model: m}\n"
+    )
+    cfg = load_config(ok)
+    assert cfg.cooldown_seconds == 15.0
+
+
+def test_example_config_ships_cooldown(monkeypatch):
+    _set_env(monkeypatch, EXAMPLE_ENV)
+    cfg = load_config(EXAMPLE)
+    assert cfg.cooldown_seconds == 60.0
+
+
 def test_allows_templated_pool_without_static_pool_check(tmp_path, monkeypatch):
     monkeypatch.setenv("K", "x")
     ok = tmp_path / "ok.yaml"
