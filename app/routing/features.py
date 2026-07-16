@@ -9,6 +9,7 @@ class RequestFeatures:
     has_tools: bool
     system_prompt: str
     headers: dict[str, str]
+    last_user_text: str = ""
 
 
 def estimate_tokens(text: str) -> int:
@@ -36,13 +37,17 @@ def extract_features(body: dict, headers: dict[str, str]) -> RequestFeatures:
     messages = body.get("messages") or []
     all_text: list[str] = []
     system_text: list[str] = []
+    last_user_text = ""
     for message in messages:
         if not isinstance(message, dict):
             continue
         text = _content_text(message.get("content"))
         all_text.append(text)
-        if message.get("role") == "system":
+        role = message.get("role")
+        if role == "system":
             system_text.append(text)
+        elif role == "user":
+            last_user_text = text
 
     has_tools = bool(body.get("tools")) or bool(body.get("functions"))
     return RequestFeatures(
@@ -50,4 +55,5 @@ def extract_features(body: dict, headers: dict[str, str]) -> RequestFeatures:
         has_tools=has_tools,
         system_prompt="\n".join(system_text),
         headers={k.lower(): v for k, v in headers.items()},
+        last_user_text=last_user_text,
     )
