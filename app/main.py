@@ -15,6 +15,8 @@ from app.core.logging import configure_logging
 from app.cost.tracker import CostTracker
 from app.providers.registry import build_registry
 from app.repositories.requests_repo import RequestsRepository
+from app.routing.classifier import Classifier
+from app.routing.classifier_caller import ExecutorProbeCaller
 from app.routing.executor import FallbackExecutor
 from app.routing.gateway import GatewayService
 from app.routing.health import HealthTracker
@@ -36,9 +38,22 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         registry = build_registry(config, http_client)
         rule_engine = RuleEngine(config.rules)
         pool_resolver = PoolResolver(config.pools, config.default_pool)
-        router = Router(rule_engine, pool_resolver)
         health = HealthTracker(cooldown_seconds=config.cooldown_seconds)
         executor = FallbackExecutor(registry, pool_resolver, health)
+
+        classifier = None
+        if config.classifier.enabled:
+            caller = ExecutorProbeCaller(executor, pool_resolver, config.classifier.pool)
+            classifier = Classifier(
+                caller=caller,
+                labels=config.classifier.labels,
+                fallback_pool=config.classifier.fallback_pool,
+                timeout_s=config.classifier.timeout_s,
+                max_probe_chars=config.classifier.max_probe_chars,
+                max_output_tokens=config.classifier.max_output_tokens,
+            )
+        router = Router(rule_engine, pool_resolver, classifier)
+
         cost = CostTracker(config.prices)
         repo = RequestsRepository(db.connection)
         app.state.config = config
