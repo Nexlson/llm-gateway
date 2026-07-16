@@ -303,7 +303,7 @@ async def test_ac_r10_routing_pure_and_never_raises():
     # arbitrary/odd bodies must never raise
     for b in [{}, {"messages": None}, {"messages": [1, 2, 3]},
               {"tools": "notalist"}, {"messages": [{"role": "system"}]}]:
-        res = router.route(b, {"x-pool": ""})
+        res = await router.route(b, {"x-pool": ""})
         assert res.pool in pools
 
 

@@ -44,3 +44,24 @@ def test_extract_handles_list_content_parts():
         headers={},
     )
     assert f.input_tokens == estimate_tokens("abcd")
+
+
+def test_last_user_text_is_final_user_message():
+    body = {"messages": [
+        {"role": "system", "content": "sys"},
+        {"role": "user", "content": "first"},
+        {"role": "assistant", "content": "reply"},
+        {"role": "user", "content": "second and last"},
+    ]}
+    f = extract_features(body, {})
+    assert f.last_user_text == "second and last"
+
+
+def test_last_user_text_empty_when_no_user_message():
+    f = extract_features({"messages": [{"role": "system", "content": "sys"}]}, {})
+    assert f.last_user_text == ""
+
+
+def test_last_user_text_defaults_on_direct_construction():
+    f = RequestFeatures(input_tokens=0, has_tools=False, system_prompt="", headers={})
+    assert f.last_user_text == ""

@@ -47,3 +47,15 @@ rules:
   - name: short-and-simple         # short, tool-less → cheap pool
     when: { max_input_tokens: 500, has_tools: false }
     pool: cheap
+
+# Stage-2 classifier: consulted ONLY when no stage-1 rule matches. It runs a cheap
+# model that returns exactly one label (a pool name); on timeout/error/garbage the
+# request degrades to fallback_pool. A classifier failure never fails the request.
+classifier:
+  enabled: true
+  pool: cheap              # the classifier itself runs on the cheap pool
+  labels: [cheap, default] # allowed outputs; each must be a defined pool
+  fallback_pool: default   # used on timeout / error / unparseable output
+  timeout_s: 5.0           # hard timeout for the classifier call
+  max_probe_chars: 2000    # truncate system prompt + last user message to this many chars each
+  max_output_tokens: 8     # constrained output for the label

@@ -144,6 +144,87 @@ def test_example_config_ships_cooldown(monkeypatch):
     assert cfg.cooldown_seconds == 60.0
 
 
+def _classifier_yaml(block: str) -> str:
+    return (
+        "api_key_env: K\n"
+        "default_pool: default\n"
+        "db_path: g.db\n"
+        "providers:\n  p:\n    base_url: http://x\n    api_key_env: K\n"
+        "pools:\n"
+        "  default:\n    - {provider: p, model: m}\n"
+        "  cheap:\n    - {provider: p, model: c}\n"
+        + block
+    )
+
+
+def test_classifier_defaults_disabled(tmp_path, monkeypatch):
+    monkeypatch.setenv("K", "x")
+    ok = tmp_path / "ok.yaml"
+    ok.write_text(_classifier_yaml(""))
+    cfg = load_config(ok)
+    assert cfg.classifier.enabled is False
+
+
+def test_example_config_ships_enabled_classifier(monkeypatch):
+    _set_env(monkeypatch, EXAMPLE_ENV)
+    cfg = load_config(EXAMPLE)
+    assert cfg.classifier.enabled is True
+    assert cfg.classifier.pool == "cheap"
+    assert cfg.classifier.labels == ["cheap", "default"]
+    assert cfg.classifier.fallback_pool == "default"
+
+
+def test_enabled_classifier_rejects_unknown_pool(tmp_path, monkeypatch):
+    monkeypatch.setenv("K", "x")
+    bad = tmp_path / "bad.yaml"
+    bad.write_text(_classifier_yaml(
+        "classifier:\n  enabled: true\n  pool: nope\n"
+        "  labels: [cheap, default]\n  fallback_pool: default\n"))
+    with pytest.raises(ValueError):
+        load_config(bad)
+
+
+def test_enabled_classifier_rejects_unknown_fallback_pool(tmp_path, monkeypatch):
+    monkeypatch.setenv("K", "x")
+    bad = tmp_path / "bad.yaml"
+    bad.write_text(_classifier_yaml(
+        "classifier:\n  enabled: true\n  pool: cheap\n"
+        "  labels: [cheap, default]\n  fallback_pool: nope\n"))
+    with pytest.raises(ValueError):
+        load_config(bad)
+
+
+def test_enabled_classifier_rejects_unknown_label(tmp_path, monkeypatch):
+    monkeypatch.setenv("K", "x")
+    bad = tmp_path / "bad.yaml"
+    bad.write_text(_classifier_yaml(
+        "classifier:\n  enabled: true\n  pool: cheap\n"
+        "  labels: [cheap, nope]\n  fallback_pool: default\n"))
+    with pytest.raises(ValueError):
+        load_config(bad)
+
+
+def test_enabled_classifier_rejects_empty_labels(tmp_path, monkeypatch):
+    monkeypatch.setenv("K", "x")
+    bad = tmp_path / "bad.yaml"
+    bad.write_text(_classifier_yaml(
+        "classifier:\n  enabled: true\n  pool: cheap\n"
+        "  labels: []\n  fallback_pool: default\n"))
+    with pytest.raises(ValueError):
+        load_config(bad)
+
+
+def test_disabled_classifier_skips_validation(tmp_path, monkeypatch):
+    monkeypatch.setenv("K", "x")
+    ok = tmp_path / "ok.yaml"
+    # references a bogus pool but disabled -> must NOT raise
+    ok.write_text(_classifier_yaml(
+        "classifier:\n  enabled: false\n  pool: nope\n"
+        "  labels: [nope]\n  fallback_pool: nope\n"))
+    cfg = load_config(ok)
+    assert cfg.classifier.enabled is False
+
+
 def test_allows_templated_pool_without_static_pool_check(tmp_path, monkeypatch):
     monkeypatch.setenv("K", "x")
     ok = tmp_path / "ok.yaml"

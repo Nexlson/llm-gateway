@@ -25,7 +25,7 @@ class GatewayService:
         if not requested:
             raise BadRequestError("Missing required field 'model'", param="model")
 
-        resolution = self._router.route(body, headers)
+        resolution = await self._router.route(body, headers)
         started = time.monotonic()
         outcome = await self._executor.execute(body, resolution)
         latency_ms = int((time.monotonic() - started) * 1000)

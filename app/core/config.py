@@ -38,6 +38,16 @@ class RuleConfig(BaseModel):
     pool: str
 
 
+class ClassifierConfig(BaseModel):
+    enabled: bool = False
+    pool: str = ""              # cheap pool the classifier itself runs on
+    labels: list[str] = Field(default_factory=list)  # candidate pool names
+    fallback_pool: str = ""     # used on timeout / error / garbage
+    timeout_s: float = 5.0      # hard timeout for the classifier call
+    max_probe_chars: int = 2000  # per-slice truncation cap (system, last user)
+    max_output_tokens: int = 8   # constrained classifier output
+
+
 class AppConfig(BaseModel):
     api_key_env: str = ""     # name of the env var holding the gateway's static key
     api_key: str = ""         # resolved from os.environ[api_key_env] at load time
@@ -48,6 +58,7 @@ class AppConfig(BaseModel):
     pools: dict[str, list[PoolEntry]]
     prices: dict[str, PriceEntry] = Field(default_factory=dict)
     rules: list[RuleConfig] = Field(default_factory=list)
+    classifier: ClassifierConfig = Field(default_factory=ClassifierConfig)
 
 
 def load_config(path: str | os.PathLike) -> AppConfig:
@@ -98,3 +109,18 @@ def _validate(cfg: AppConfig) -> None:
             raise ValueError(
                 f"rule '{rule.name}' references unknown pool '{rule.pool}'"
             )
+    c = cfg.classifier
+    if c.enabled:
+        if c.pool not in cfg.pools:
+            raise ValueError(f"classifier.pool '{c.pool}' is not a defined pool")
+        if c.fallback_pool not in cfg.pools:
+            raise ValueError(
+                f"classifier.fallback_pool '{c.fallback_pool}' is not a defined pool"
+            )
+        if not c.labels:
+            raise ValueError("classifier.labels must be non-empty when enabled")
+        for label in c.labels:
+            if label not in cfg.pools:
+                raise ValueError(
+                    f"classifier label '{label}' is not a defined pool"
+                )
