@@ -48,6 +48,13 @@ class ClassifierConfig(BaseModel):
     max_output_tokens: int = 8   # constrained classifier output
 
 
+class DashboardConfig(BaseModel):
+    budget_usd: float | None = Field(default=None, gt=0)
+    baseline_model: str | None = None
+    recent_request_limit: int = Field(default=50, ge=1, le=500)
+    fallback_event_limit: int = Field(default=25, ge=1, le=500)
+
+
 class AppConfig(BaseModel):
     api_key_env: str = ""     # name of the env var holding the gateway's static key
     api_key: str = ""         # resolved from os.environ[api_key_env] at load time
@@ -59,6 +66,7 @@ class AppConfig(BaseModel):
     prices: dict[str, PriceEntry] = Field(default_factory=dict)
     rules: list[RuleConfig] = Field(default_factory=list)
     classifier: ClassifierConfig = Field(default_factory=ClassifierConfig)
+    dashboard: DashboardConfig = Field(default_factory=DashboardConfig)
 
 
 def load_config(path: str | os.PathLike) -> AppConfig:
@@ -124,3 +132,8 @@ def _validate(cfg: AppConfig) -> None:
                 raise ValueError(
                     f"classifier label '{label}' is not a defined pool"
                 )
+    baseline = cfg.dashboard.baseline_model
+    if baseline is not None and baseline not in cfg.prices:
+        raise ValueError(
+            f"dashboard.baseline_model '{baseline}' has no price entry"
+        )
