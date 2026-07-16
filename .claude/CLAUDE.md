@@ -82,7 +82,7 @@ docker compose up                  # run as deployed (SQLite volume + reverse pr
 | M2 | YAML rule engine + pools + cost table | ✅ done (merged to `main`) |
 | M3 | Fallback chain + 60s cooldown | ✅ done (merged to `main`) |
 | M4 | Classifier stage + routing-reason capture | ✅ done (merged to `main`) |
-| M5 | Dashboard | next |
+| M5 | Dashboard | ✅ done (merged to `main`) |
 | M6 | VPS deploy, first real workload cut over | |
 
 ## Autonomous milestone execution

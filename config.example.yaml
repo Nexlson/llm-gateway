@@ -59,3 +59,12 @@ classifier:
   timeout_s: 5.0           # hard timeout for the classifier call
   max_probe_chars: 2000    # truncate system prompt + last user message to this many chars each
   max_output_tokens: 8     # constrained output for the label
+
+# Server-rendered dashboard. budget_usd is an optional monthly budget; leave it
+# null to show spend without a budget line. baseline_model estimates what this
+# month's recorded tokens would cost on one model using the static rates above.
+dashboard:
+  budget_usd: null
+  baseline_model: claude-sonnet-5
+  recent_request_limit: 50
+  fallback_event_limit: 25

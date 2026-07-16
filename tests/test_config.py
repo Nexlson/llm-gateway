@@ -238,3 +238,33 @@ def test_allows_templated_pool_without_static_pool_check(tmp_path, monkeypatch):
     )
     cfg = load_config(ok)             # must not raise despite templated pool
     assert cfg.rules[0].pool == "{{ header.x-pool }}"
+
+
+def test_dashboard_config_defaults_disabled(tmp_path, monkeypatch):
+    monkeypatch.setenv("K", "x")
+    ok = tmp_path / "ok.yaml"
+    ok.write_text(_classifier_yaml(""))
+    cfg = load_config(ok)
+    assert cfg.dashboard.budget_usd is None
+    assert cfg.dashboard.baseline_model is None
+    assert cfg.dashboard.recent_request_limit == 50
+    assert cfg.dashboard.fallback_event_limit == 25
+
+
+def test_example_config_ships_dashboard_settings(monkeypatch):
+    _set_env(monkeypatch, EXAMPLE_ENV)
+    cfg = load_config(EXAMPLE)
+    assert cfg.dashboard.budget_usd is None
+    assert cfg.dashboard.baseline_model == "claude-sonnet-5"
+
+
+def test_dashboard_rejects_unknown_baseline_model(tmp_path, monkeypatch):
+    monkeypatch.setenv("K", "x")
+    bad = tmp_path / "bad.yaml"
+    bad.write_text(
+        _classifier_yaml("")
+        + "prices:\n  m: {input_per_1m: 1, output_per_1m: 2}\n"
+        + "dashboard:\n  baseline_model: missing\n"
+    )
+    with pytest.raises(ValueError, match="dashboard.baseline_model"):
+        load_config(bad)

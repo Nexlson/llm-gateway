@@ -13,6 +13,7 @@ from app.core.database import Database
 from app.core.errors import register_exception_handlers
 from app.core.logging import configure_logging
 from app.cost.tracker import CostTracker
+from app.dashboard import DashboardService
 from app.providers.registry import build_registry
 from app.repositories.requests_repo import RequestsRepository
 from app.routing.classifier import Classifier
@@ -60,6 +61,9 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         app.state.db = db
         app.state.http_client = http_client
         app.state.gateway = GatewayService(router, executor, cost, repo)
+        app.state.dashboard = DashboardService(
+            repo, config.dashboard, config.prices
+        )
         try:
             yield
         finally:
