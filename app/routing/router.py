@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from app.routing.classifier import Classifier
 from app.routing.features import extract_features
 from app.routing.pools import PoolResolver
 from app.routing.rules import RuleEngine
@@ -17,11 +18,17 @@ class Resolution:
 
 
 class Router:
-    def __init__(self, rule_engine: RuleEngine, pool_resolver: PoolResolver) -> None:
+    def __init__(
+        self,
+        rule_engine: RuleEngine,
+        pool_resolver: PoolResolver,
+        classifier: Classifier | None = None,
+    ) -> None:
         self._rules = rule_engine
         self._pools = pool_resolver
+        self._classifier = classifier
 
-    def route(self, body: dict, headers: dict[str, str]) -> Resolution:
+    async def route(self, body: dict, headers: dict[str, str]) -> Resolution:
         features = extract_features(body, headers)
         match = self._rules.match(features)
 
@@ -30,6 +37,13 @@ class Router:
         elif match is not None:
             pool, stage = self._pools.default_pool, "default"
             reason = f"rule:{match.rule_name}:unknown-pool:{match.pool}"
+        elif self._classifier is not None:
+            decision = await self._classifier.classify(features)
+            if self._pools.has_pool(decision.pool):
+                pool, stage, reason = decision.pool, "classifier", decision.reason
+            else:
+                pool, stage = self._pools.default_pool, "default"
+                reason = f"{decision.reason}:unknown-pool:{decision.pool}"
         else:
             pool, stage, reason = self._pools.default_pool, "default", "no-rule-matched"
 
