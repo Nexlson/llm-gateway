@@ -1,0 +1,14 @@
+.git
+.claude
+.serena
+.venv
+.pytest_cache
+__pycache__
+*.py[cod]
+*.db
+*.db-wal
+*.db-shm
+config.yaml
+.env
+tests
+docs

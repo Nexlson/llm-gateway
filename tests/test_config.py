@@ -11,6 +11,8 @@ EXAMPLE_ENV = {
     "GATEWAY_API_KEY": "test-gateway-key",
     "DEEPSEEK_API_KEY": "test-deepseek-key",
     "ANTHROPIC_API_KEY": "test-anthropic-key",
+    "GROK_API_KEY": "test-grok-key",
+    "OPEN_AI_API_KEY": "test-openai-key",
 }
 
 
@@ -26,6 +28,8 @@ def test_loads_example_config(monkeypatch):
     # api_key is resolved from os.environ[api_key_env], never stored in YAML.
     assert cfg.api_key == "test-gateway-key"
     assert cfg.providers["deepseek"].api_key == "test-deepseek-key"
+    assert cfg.providers["grok"].api_key == "test-grok-key"
+    assert cfg.providers["openai"].api_key == "test-openai-key"
     assert cfg.default_pool in cfg.pools
     assert cfg.pools["default"][0].provider in cfg.providers
     assert cfg.prices != {}  # M2 example ships a populated price table

@@ -32,6 +32,8 @@ EXAMPLE_ENV = {
     "GATEWAY_API_KEY": "test-gateway-key",
     "DEEPSEEK_API_KEY": "test-deepseek-key",
     "ANTHROPIC_API_KEY": "test-anthropic-key",
+    "GROK_API_KEY": "test-grok-key",
+    "OPEN_AI_API_KEY": "test-openai-key",
 }
 
 

@@ -360,6 +360,7 @@ async def test_ac_x1_no_fallback_path_identical_to_m2(app_and_client):
 def test_ac_cfg_cooldown_config_driven(monkeypatch):
     for k, v in {
         "GATEWAY_API_KEY": "k", "DEEPSEEK_API_KEY": "k", "ANTHROPIC_API_KEY": "k",
+        "GROK_API_KEY": "k", "OPEN_AI_API_KEY": "k",
     }.items():
         monkeypatch.setenv(k, v)
     cfg = load_config(EXAMPLE)

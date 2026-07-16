@@ -1,0 +1,23 @@
+services:
+  gateway:
+    build: .
+    image: llm-gateway:local
+    init: true
+    restart: unless-stopped
+    working_dir: /data
+    environment:
+      PYTHONPATH: /app
+      GATEWAY_CONFIG: /app/config.yaml
+      GATEWAY_API_KEY: ${GATEWAY_API_KEY:?set GATEWAY_API_KEY in .env}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:?set DEEPSEEK_API_KEY in .env}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:?set ANTHROPIC_API_KEY in .env}
+      GROK_API_KEY: ${GROK_API_KEY:?set GROK_API_KEY in .env}
+      OPEN_AI_API_KEY: ${OPEN_AI_API_KEY:?set OPEN_AI_API_KEY in .env}
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+      - gateway_data:/data
+    ports:
+      - "${GATEWAY_PORT:-8000}:8000"
+
+volumes:
+  gateway_data:

@@ -443,6 +443,8 @@ EXAMPLE_ENV = {
     "GATEWAY_API_KEY": "test-gateway-key",
     "DEEPSEEK_API_KEY": "test-deepseek-key",
     "ANTHROPIC_API_KEY": "test-anthropic-key",
+    "GROK_API_KEY": "test-grok-key",
+    "OPEN_AI_API_KEY": "test-openai-key",
 }
 
 
@@ -534,6 +536,8 @@ def test_a13_env_vars_populate_resolved_keys(monkeypatch):
 def test_a13_unset_env_var_fails_fast(monkeypatch):
     monkeypatch.setenv("GATEWAY_API_KEY", "test-gateway-key")
     monkeypatch.setenv("DEEPSEEK_API_KEY", "test-deepseek-key")
+    monkeypatch.setenv("GROK_API_KEY", "test-grok-key")
+    monkeypatch.setenv("OPEN_AI_API_KEY", "test-openai-key")
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     with pytest.raises(ValueError):
         load_config(EXAMPLE)
@@ -543,5 +547,7 @@ def test_a13_empty_env_var_fails_fast(monkeypatch):
     monkeypatch.setenv("GATEWAY_API_KEY", "test-gateway-key")
     monkeypatch.setenv("DEEPSEEK_API_KEY", "test-deepseek-key")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "")  # empty -> must fail fast
+    monkeypatch.setenv("GROK_API_KEY", "test-grok-key")
+    monkeypatch.setenv("OPEN_AI_API_KEY", "test-openai-key")
     with pytest.raises(ValueError):
         load_config(EXAMPLE)

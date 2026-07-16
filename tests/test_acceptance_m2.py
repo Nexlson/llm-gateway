@@ -373,6 +373,7 @@ async def test_ac_c3_unknown_model_cost_zero(custom_app):
 def test_ac_c4_example_prices_non_empty(monkeypatch):
     for k, v in {
         "GATEWAY_API_KEY": "k", "DEEPSEEK_API_KEY": "k", "ANTHROPIC_API_KEY": "k",
+        "GROK_API_KEY": "k", "OPEN_AI_API_KEY": "k",
     }.items():
         monkeypatch.setenv(k, v)
     cfg = load_config(EXAMPLE)

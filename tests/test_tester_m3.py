@@ -371,7 +371,8 @@ async def test_m3_ac_x1_no_fallback_path_identical_to_m2(app_and_client):
 
 
 def test_m3_ac_cfg_cooldown_default_and_example(monkeypatch):
-    for k in ("GATEWAY_API_KEY", "DEEPSEEK_API_KEY", "ANTHROPIC_API_KEY"):
+    for k in ("GATEWAY_API_KEY", "DEEPSEEK_API_KEY", "ANTHROPIC_API_KEY",
+              "GROK_API_KEY", "OPEN_AI_API_KEY"):
         monkeypatch.setenv(k, "k")
     cfg = load_config(EXAMPLE)
     assert cfg.cooldown_seconds == 60.0
